@@ -18,9 +18,6 @@ on:
 env:
   ENV: ${{ inputs.env || 'demo' }}
   TAG: ${{ inputs.tag || '@regression' }}
-  BASE_URL: ${{ vars.BASE_URL }}
-  ADMIN_USER: ${{ secrets.ADMIN_USER }}
-  ADMIN_PASS: ${{ secrets.ADMIN_PASS }}
 
 jobs:
   quality:
@@ -41,11 +38,6 @@ jobs:
     name: e2e (shard ${{ matrix.shard }} of 2)
     needs: quality
     runs-on: ubuntu-latest
-    env:
-      ENV: ${{ inputs.env || 'demo' }}
-      BASE_URL: ${{ vars.BASE_URL }}
-      ADMIN_USER: ${{ secrets.ADMIN_USER }}
-      ADMIN_PASS: ${{ secrets.ADMIN_PASS }}
     strategy:
       fail-fast: false
       matrix:
@@ -58,13 +50,20 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium
+
       - name: Run tests
+        env:
+          ENV: ${{ inputs.env || 'demo' }}
+          BASE_URL: ${{ vars.BASE_URL }}
+          ADMIN_USER: ${{ secrets.ADMIN_USER }}
+          ADMIN_PASS: ${{ secrets.ADMIN_PASS }}
         run: >-
           npx playwright test
           --shard=${{ matrix.shard }}/2
           --grep "${{ env.TAG }}"
           --grep-invert "@quarantine"
           --pass-with-no-tests
+
       - name: Upload shard blob report
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
@@ -72,6 +71,7 @@ jobs:
           name: blob-report-${{ matrix.shard }}
           path: blob-report
           retention-days: 7
+
       - name: Upload failure evidence (screenshots, videos, traces)
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
@@ -93,11 +93,13 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+
       - uses: actions/download-artifact@v4
         with:
           pattern: blob-report-*
           path: all-blob-reports
           merge-multiple: true
+
       - name: Check if blob reports exist
         id: check
         run: |
@@ -106,12 +108,15 @@ jobs:
           else
             echo "has_reports=false" >> "$GITHUB_OUTPUT"
           fi
+
       - name: Merge shard reports into one HTML report
         if: ${{ steps.check.outputs.has_reports == 'true' }}
         run: npx playwright merge-reports --config=playwright.merge.config.ts ./all-blob-reports
+
       - name: Add test summary to the run page
         if: ${{ steps.check.outputs.has_reports == 'true' }}
         run: node scripts/ci-summary.js results/results.json
+
       - uses: actions/upload-artifact@v4
         if: ${{ steps.check.outputs.has_reports == 'true' }}
         with:
@@ -125,11 +130,6 @@ jobs:
     name: Quarantined tests (not blocking)
     if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' }}
     runs-on: ubuntu-latest
-    env:
-      ENV: demo
-      BASE_URL: ${{ vars.BASE_URL }}
-      ADMIN_USER: ${{ secrets.ADMIN_USER }}
-      ADMIN_PASS: ${{ secrets.ADMIN_PASS }}
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
@@ -139,18 +139,20 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - run: npm run quarantine
+
+      - name: Run quarantined tests
+        env:
+          ENV: demo
+          BASE_URL: ${{ vars.BASE_URL }}
+          ADMIN_USER: ${{ secrets.ADMIN_USER }}
+          ADMIN_PASS: ${{ secrets.ADMIN_PASS }}
+        run: npm run quarantine
 
   perf:
     name: k6 performance (bonus, not blocking)
     needs: e2e
     if: ${{ github.event_name != 'pull_request' && !cancelled() }}
     runs-on: ubuntu-latest
-    env:
-      ENV: demo
-      BASE_URL: ${{ vars.BASE_URL }}
-      ADMIN_USER: ${{ secrets.ADMIN_USER }}
-      ADMIN_PASS: ${{ secrets.ADMIN_PASS }}
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
@@ -160,8 +162,23 @@ jobs:
           cache: npm
       - run: npm ci
       - uses: grafana/setup-k6-action@v1
-      - run: npm run perf:login
-      - run: npm run perf:employee
+
+      - name: Run login perf
+        env:
+          ENV: demo
+          BASE_URL: ${{ vars.BASE_URL }}
+          ADMIN_USER: ${{ secrets.ADMIN_USER }}
+          ADMIN_PASS: ${{ secrets.ADMIN_PASS }}
+        run: npm run perf:login
+
+      - name: Run employee perf
+        env:
+          ENV: demo
+          BASE_URL: ${{ vars.BASE_URL }}
+          ADMIN_USER: ${{ secrets.ADMIN_USER }}
+          ADMIN_PASS: ${{ secrets.ADMIN_PASS }}
+        run: npm run perf:employee
+
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
         with:
