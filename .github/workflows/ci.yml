@@ -41,6 +41,12 @@ jobs:
     name: e2e (shard ${{ matrix.shard }} of 2)
     needs: quality
     runs-on: ubuntu-latest
+    # Ensure env vars are available in this job as well
+    env:
+      ENV: ${{ inputs.env || 'demo' }}
+      BASE_URL: ${{ vars.BASE_URL }}
+      ADMIN_USER: ${{ secrets.ADMIN_USER }}
+      ADMIN_PASS: ${{ secrets.ADMIN_PASS }}
     strategy:
       fail-fast: false
       matrix:
@@ -125,6 +131,12 @@ jobs:
     needs: e2e
     if: ${{ github.event_name != 'pull_request' && !cancelled() }}
     runs-on: ubuntu-latest
+    # Ensure env vars are available for perf jobs too
+    env:
+      ENV: ${{ inputs.env || 'demo' }}
+      BASE_URL: ${{ vars.BASE_URL }}
+      ADMIN_USER: ${{ secrets.ADMIN_USER }}
+      ADMIN_PASS: ${{ secrets.ADMIN_PASS }}
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
