@@ -1,0 +1,42 @@
+{
+  "name": "arul-jeshin-pearlsoft-orangehrm",
+  "version": "1.0.0",
+  "description": "OrangeHRM end to end, API and performance tests built with Playwright, TypeScript and k6",
+  "scripts": {
+    "test": "playwright test",
+    "test:demo": "cross-env ENV=demo playwright test",
+    "test:staging": "cross-env ENV=staging playwright test",
+    "smoke": "playwright test --grep @smoke",
+    "regression": "playwright test --grep @regression --grep-invert @quarantine",
+    "rbac": "playwright test --grep @rbac",
+    "quarantine": "playwright test --grep @quarantine --pass-with-no-tests",
+    "report": "playwright show-report",
+    "report:sample": "node scripts/snapshot-report.js",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "perf:login": "node scripts/run-k6.js perf/login.js",
+    "perf:employee": "node scripts/run-k6.js perf/employee-create.js",
+    "perf": "npm run perf:login && npm run perf:employee"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^26.6.4",
+    "cross-env": "^10.1.0",
+    "dotenv": "^18.0.6",
+    "eslint": "^10.12.0",
+    "eslint-plugin-playwright": "^2.12.1",
+    "prettier": "^3.9.9",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.71.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

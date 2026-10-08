@@ -1,0 +1,12 @@
+node_modules
+.auth
+test-results
+playwright-report
+blob-report
+results
+all-blob-reports
+.env.local
+.env.*.local
+.env
+.env.*
+!.env.example

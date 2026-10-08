@@ -1,0 +1,144 @@
+name: e2e
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '30 2 * * *' # nightly full run, used to spot flaky tests over time
+  workflow_dispatch:
+    inputs:
+      env:
+        description: 'Target environment (reads .env.<name>)'
+        default: 'demo'
+      tag:
+        description: 'Tag filter, for example @smoke or @rbac'
+        default: '@regression'
+
+env:
+  ENV: ${{ inputs.env || 'demo' }}
+  TAG: ${{ inputs.tag || '@regression' }}
+  BASE_URL: ${{ vars.BASE_URL }}
+  ADMIN_USER: ${{ secrets.ADMIN_USER }}
+  ADMIN_PASS: ${{ secrets.ADMIN_PASS }}
+
+jobs:
+  quality:
+    name: Type check, lint and format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run format:check
+
+  e2e:
+    name: e2e (shard ${{ matrix.shard }} of 2)
+    needs: quality
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Run tests
+        run: >
+          npx playwright test
+          --shard=${{ matrix.shard }}/2
+          --grep "${{ env.TAG }}"
+          --grep-invert "@quarantine"
+          --pass-with-no-tests
+      - name: Upload shard blob report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: blob-report-${{ matrix.shard }}
+          path: blob-report
+          retention-days: 7
+      - name: Upload failure evidence (screenshots, videos, traces)
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.shard }}
+          path: test-results
+          if-no-files-found: ignore
+          retention-days: 14
+
+  report:
+    name: Merge reports
+    needs: e2e
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: blob-report-*
+          path: all-blob-reports
+          merge-multiple: true
+      - name: Merge shard reports into one HTML report
+        run: npx playwright merge-reports --config=playwright.merge.config.ts ./all-blob-reports
+      - name: Add test summary to the run page
+        run: node scripts/ci-summary.js results/results.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: html-report
+          path: |
+            playwright-report
+            results
+          retention-days: 14
+
+  quarantine:
+    name: Quarantined tests (not blocking)
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' }}
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run quarantine
+
+  perf:
+    name: k6 performance (bonus, not blocking)
+    needs: e2e
+    if: ${{ github.event_name != 'pull_request' && !cancelled() }}
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - uses: grafana/setup-k6-action@v1
+      - run: npm run perf:login
+      - run: npm run perf:employee
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: k6-reports
+          path: perf/reports
+          retention-days: 14
