@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # OrangeHRM test automation (Pearlsoft technical assessment)
 
 End to end, API and performance tests for the OrangeHRM employee module, built with Playwright,
@@ -243,3 +244,8 @@ second API call on a login session, so the create script signs in on every itera
 - The role checks cover the ESS role. Other roles (for example a supervisor) are a next step.
 - The ESS role id comes from `ESS_ROLE_ID` and defaults to the demo's value.
 - Next: visual checks, Slack alerts for flaky tests, and a dedicated test environment.
+=======
+# ArulJeshin_pearlsoft-orangehrmV2
+Pearl Soft-Assessment
+>>>>>>> c1c2d3cdd4f0309a3993aa6b8ca362c4ae166317
+"# ArulJeshin_pearlsoft-orangehrmV2" 
