@@ -5,7 +5,7 @@ on:
     branches: [main]
   pull_request:
   schedule:
-    - cron: '30 2 * * *' # nightly full run, used to spot flaky tests over time
+    - cron: '30 2 * * *'
   workflow_dispatch:
     inputs:
       env:
@@ -41,7 +41,6 @@ jobs:
     name: e2e (shard ${{ matrix.shard }} of 2)
     needs: quality
     runs-on: ubuntu-latest
-    # Ensure env vars are available in this job as well
     env:
       ENV: ${{ inputs.env || 'demo' }}
       BASE_URL: ${{ vars.BASE_URL }}
@@ -60,7 +59,7 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - name: Run tests
-        run: >
+        run: >-
           npx playwright test
           --shard=${{ matrix.shard }}/2
           --grep "${{ env.TAG }}"
@@ -85,7 +84,7 @@ jobs:
   report:
     name: Merge reports
     needs: e2e
-    if: ${{ !cancelled() }}
+    if: ${{ !cancelled() && (needs.e2e.result == 'success' || needs.e2e.result == 'failure') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -99,11 +98,22 @@ jobs:
           pattern: blob-report-*
           path: all-blob-reports
           merge-multiple: true
+      - name: Check if blob reports exist
+        id: check
+        run: |
+          if [ -d all-blob-reports ] && [ "$(ls -A all-blob-reports 2>/dev/null)" ]; then
+            echo "has_reports=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_reports=false" >> "$GITHUB_OUTPUT"
+          fi
       - name: Merge shard reports into one HTML report
+        if: ${{ steps.check.outputs.has_reports == 'true' }}
         run: npx playwright merge-reports --config=playwright.merge.config.ts ./all-blob-reports
       - name: Add test summary to the run page
+        if: ${{ steps.check.outputs.has_reports == 'true' }}
         run: node scripts/ci-summary.js results/results.json
       - uses: actions/upload-artifact@v4
+        if: ${{ steps.check.outputs.has_reports == 'true' }}
         with:
           name: html-report
           path: |
@@ -115,6 +125,11 @@ jobs:
     name: Quarantined tests (not blocking)
     if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' }}
     runs-on: ubuntu-latest
+    env:
+      ENV: demo
+      BASE_URL: ${{ vars.BASE_URL }}
+      ADMIN_USER: ${{ secrets.ADMIN_USER }}
+      ADMIN_PASS: ${{ secrets.ADMIN_PASS }}
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
@@ -131,9 +146,8 @@ jobs:
     needs: e2e
     if: ${{ github.event_name != 'pull_request' && !cancelled() }}
     runs-on: ubuntu-latest
-    # Ensure env vars are available for perf jobs too
     env:
-      ENV: ${{ inputs.env || 'demo' }}
+      ENV: demo
       BASE_URL: ${{ vars.BASE_URL }}
       ADMIN_USER: ${{ secrets.ADMIN_USER }}
       ADMIN_PASS: ${{ secrets.ADMIN_PASS }}
