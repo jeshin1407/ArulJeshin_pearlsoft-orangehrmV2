@@ -6,8 +6,7 @@ import { BasePage } from './BasePage';
 export class DashboardPage extends BasePage {
   readonly menu = new MenuComponent(this.page);
 
-  
-   // Opens a route and checks the user cannot see its content.
+  // Opens a route and checks the user cannot see its content.
 
   async expectRouteBlocked(route: string): Promise<void> {
     await this.open(route);

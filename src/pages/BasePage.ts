@@ -15,15 +15,14 @@ export abstract class BasePage {
   }
 
   //wait until all spinners go out
-  
-  protected async waitForLoader(): Promise<void> {
-  try {
-    await expect(this.page.locator('.oxd-loading-spinner')).toHaveCount(0, { timeout: 15_000 });
-  } catch {
-    this.log.warn('Loading spinner was still visible after the timeout, continuing');
-  }
-}
 
+  protected async waitForLoader(): Promise<void> {
+    try {
+      await expect(this.page.locator('.oxd-loading-spinner')).toHaveCount(0, { timeout: 15_000 });
+    } catch {
+      this.log.warn('Loading spinner was still visible after the timeout, continuing');
+    }
+  }
 
   protected inputByLabel(label: string): Locator {
     return this.page.locator('.oxd-input-group', { hasText: label }).locator('input').first();

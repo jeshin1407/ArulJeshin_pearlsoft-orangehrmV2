@@ -1,5 +1,5 @@
 //Runs a k6 script with the same environment values the Playwright tests use.
-   
+
 const fs = require('node:fs');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
