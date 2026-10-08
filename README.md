@@ -3,8 +3,8 @@
 End to end, API and performance tests for the OrangeHRM employee module, built with Playwright,
 TypeScript and k6.
 
-- Repository: https://github.com/jeshin1407/ArulJeshin_pearlsoft-orangehrm
-- Latest green CI run: https://github.com/jeshin1407/ArulJeshin_pearlsoft-orangehrm/actions/runs/37640000589
+- Repository: https://github.com/jeshin1407/ArulJeshin_pearlsoft-orangehrmV2
+- Latest green CI run: https://github.com/jeshin1407/ArulJeshin_pearlsoft-orangehrmV2/actions/runs/37792441089
 
 ![CI run](docs/screenshots/ci-artifacts1.png)
 ![CI artifacts](docs/screenshots/ci-artifacts2.png)
